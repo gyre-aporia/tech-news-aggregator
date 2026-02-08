@@ -3,13 +3,19 @@ from django.http import HttpResponse
 from .models import News, Category
 from bs4 import BeautifulSoup
 import feedparser
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+from .forms import MyCustomSignupForm
 
 rss_links = [
-    ("The Verge", "https://www.theverge.com/rss/index.xml", "Tech"),
-    ("Wired", "https://www.wired.com/feed/rss", "Tech"),
-    ("BBC World", "http://feeds.bbci.co.uk/news/world/rss.xml", "World"),
-    ("CNN Business", "http://rss.cnn.com/rss/money_latest.rss", "Business"),
-    ("Python.org", "https://www.python.org/channews.xml", "Coding"),
+    ("NASA Breaking News", "https://www.nasa.gov/rss/dyn/breaking_news.rss", "Science"),
+    ("ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml", "Science"),
+    ("Live Science", "https://www.livescience.com/feeds/all", "Science"),
+    ("FreeCodeCamp", "https://www.freecodecamp.org/news/rss/", "IT"),
+    ("MIT Tech Review", "https://www.technologyreview.com/feed/", "IT"),
+    ("Real Python", "https://realpython.com/atom.xml", "IT"),
+    ("Outside Magazine", "https://www.outsideonline.com/feed", "Sport"),
+    ("Pinkbike", "https://www.pinkbike.com/pinkbike_xml_feed.php", "Sport"),
 ]
 
 def get_image(entry):
@@ -25,6 +31,16 @@ def get_image(entry):
         for link in entry.links:
             if link.get('type') in ['image/jpeg', 'image/png']:
                 return link.get('href', '')
+
+    if 'enclosures' in entry:
+        for enclosure in entry.enclosures:
+            if enclosure.get('type', '').startswith('image/'):
+                return enclosure.get('href', '')
+
+    content_html = ''
+    if 'content' in entry:
+        for c in entry.content:
+            content_html += c.get('value', '')
 
     content_html = entry.get('summary', '') or entry.get('description', '')
 
@@ -42,7 +58,7 @@ def get_image(entry):
 def run_parser(request):
     total_added = 0
 
-    for source_name, url, category_name in rss_links:
+    for source_name, url, category_name in rss_links: # это чтобы идти по списку rss_links
         print(f"Scanning: {source_name} [{category_name}]...")
         feed = feedparser.parse(url)
 
@@ -81,3 +97,20 @@ def index(request):
         'selected_category': filter_category
     }
     return render(request, 'index.html', context)
+
+
+def signup(request):
+    if request.method == 'POST':
+
+        form = MyCustomSignupForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
+
+            login(request, user)
+            return redirect('/')
+    else:
+        form = MyCustomSignupForm()
+
+    return render(request, 'registration/signup.html', {'form': form})
