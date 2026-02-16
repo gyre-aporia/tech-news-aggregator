@@ -1,104 +1,10 @@
-<!DOCTYPE html>
+{% load static %}<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            /* Убрали flex, justify-content и align-items */
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 400px;
-
-            /* ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ: */
-            margin: 50px auto; /* Центруем блок по горизонтали */
-        }
-
-        h2 { text-align: center; color: #333; margin-bottom: 20px; }
-
-        /* Сетка для полей */
-        .form-group { margin-bottom: 15px; }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        /* Красивые поля ввода */
-        input[type="text"], input[type="email"], input[type="password"] {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box; /* Чтобы padding не ломал ширину */
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            border-color: #007bff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-        }
-
-        /* Стиль для подсказок пароля (делаем их мелкими и серыми) */
-        .helptext, ul {
-            font-size: 11px;
-            color: #999;
-            margin-top: 5px;
-            line-height: 1.4;
-            padding-left: 0;
-            list-style: none;
-        }
-
-        /* Скрываем маркеры списка подсказок */
-        ul li { display: inline-block; margin-right: 10px; }
-
-        /* Кнопка */
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
-        }
-
-        .btn-submit:hover { background: #0056b3; }
-
-        .links { text-align: center; margin-top: 15px; font-size: 13px; }
-        .links a { color: #007bff; text-decoration: none; }
-
-        /* Ошибки */
-        .errorlist {
-            color: #d9534f;
-            background: #fdf7f7;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            margin-bottom: 15px;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'news/style.css' %}">
 </head>
 <body>
 

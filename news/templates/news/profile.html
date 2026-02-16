@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+{% extends 'news/base.html' %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 40px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center;">
+
+    <div style="margin-bottom: 20px;">
+        {% if profile.avatar %}
+            <img src="{{ profile.avatar.url }}" style="width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 5px solid #007bff; box-shadow: 0 5px 15px rgba(0,123,255,0.2);">
+        {% else %}
+            <div style="width: 180px; height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 80px; color: white; margin: 0 auto;">
+                {{ user.username|slice:":1"|upper }}
+            </div>
+        {% endif %}
+    </div>
+
+    <h1 style="margin: 0; color: #2c3e50;">{{ user.username }}</h1>
+
+    <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+    <div style="text-align: left; margin-bottom: 30px;">
+        <h3 style="color: #333; font-size: 18px; margin-bottom: 10px;">About Me</h3>
+
+        {% if profile.bio %}
+            <p style="color: #555; line-height: 1.6; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                {{ profile.bio }}
+            </p>
+        {% else %}
+            <p style="color: #999; font-style: italic;">
+                The user hasn't written anything about themselves yet.
+            </p>
+        {% endif %}
+    </div>
+
+    {% if profile.birth_date %}
+    <div style="text-align: left; margin-bottom: 30px;">
+        <h3 style="color: #333; font-size: 18px; margin-bottom: 5px;">Birthday 🎂</h3>
+        <p style="color: #555;">{{ profile.birth_date }}</p>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'edit_profile' %}" style="display: inline-block; background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; transition: background 0.3s; box-shadow: 0 4px 10px rgba(0,123,255,0.3);">
+        Edit Profile
+    </a>
+
+</div>
+{% endblock %}
+</body>
+</html>

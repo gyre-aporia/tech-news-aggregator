@@ -1,6 +1,16 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from .models import Profile, Comment
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ['avatar', 'bio', 'birth_date'] # Поля, которые можно менять
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 3}), # Чтобы поле "О себе" было побольше
+            'birth_date': forms.DateInput(attrs={'type': 'date'}) # Чтобы появился календарик
+        }
 
 class MyCustomSignupForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -32,3 +42,24 @@ class MyCustomSignupForm(UserCreationForm):
             Profile.objects.create(user=user, hobby=self.cleaned_data['hobby'])
 
         return user
+
+class UserUpdateForm(forms.ModelForm):
+    email = forms.EmailField() # Сделаем email обязательным полем
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name', 'last_name']
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ['body'] # Пользователь вводит только текст
+        labels = {'body': ''} # Убираем подпись поля, чтобы было чище
+        widgets = {
+            'body': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Write a comment...',
+                'style': 'width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd;'
+            })
+        }

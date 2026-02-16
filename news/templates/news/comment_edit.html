@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+{% extends 'news/base.html' %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 50px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+
+    <h3>Edit Comment ✏️</h3>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button type="submit" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">
+            Save Changes
+        </button>
+
+        <a href="javascript:history.back()" style="margin-left: 15px; text-decoration: none; color: #666;">
+            Cancel
+        </a>
+    </form>
+
+</div>
+{% endblock %}
+</body>
+</html>
