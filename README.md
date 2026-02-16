@@ -16,7 +16,7 @@ I am learning and using these technologies:
 ### Roadmap (What I am working on)
 - [x] Project architecture planning
 - [x] Setting up Django environment
-- [ ] Writing the RSS parser script in Python
+- [x] Writing the RSS parser script in Python
 - [ ] Creating API for news data
 - [ ] Building the User Interface in React
 
