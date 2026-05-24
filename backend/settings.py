@@ -122,4 +122,14 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# Отключаем глобальный доступ для всех
+CORS_ALLOW_ALL_ORIGINS = False
+
+# Явно разрешаем адрес, на котором запущен твой React (Vite)
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+# Разрешаем передачу кук/сессий через CORS
+CORS_ALLOW_CREDENTIALS = True

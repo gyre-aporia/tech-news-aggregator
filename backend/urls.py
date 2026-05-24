@@ -13,6 +13,11 @@ from news.views import (
     # === НАШИ НОВЫЕ ИМПОРТЫ ДЛЯ API ===
     api_news_list,
     api_profile,
+    api_login,
+    api_signup,
+    api_toggle_save,
+    api_news_detail,
+    api_add_comment,
     api_add_points
 )
 
@@ -26,6 +31,11 @@ urlpatterns = [
     path('news/<int:pk>/', news_detail, name='news_detail'),
     path('comment/delete/<int:pk>/', delete_comment, name='delete_comment'),
     path('comment/edit/<int:pk>/', edit_comment, name='edit_comment'),
+    path('api/login/', api_login, name='api_login'),
+    path('api/signup/', api_signup, name='api_signup'),
+    path('api/toggle-save/', api_toggle_save, name='api_toggle_save'),
+    path('api/news/<int:pk>/', api_news_detail, name='api_news_detail'),
+    path('api/news/<int:pk>/comment/', api_add_comment, name='api_add_comment'),
 
     # === НАШИ НОВЫЕ API МАРШРУТЫ ДЛЯ REACT ===
     # По этим адресам React будет забирать и отправлять JSON данные
