@@ -5,7 +5,10 @@ from .forms import MyCustomSignupForm, ProfileForm, UserUpdateForm, CommentForm
 from django.contrib.auth.decorators import login_required  # pustí jen přihlášené uživatele
 from django.core.paginator import Paginator  # Nástroj pro rozdělení dlouhého seznamu na stránky
 from django.db.models import Q  # Umožňuje složitější dotazy do databáze (např. logické NEBO)
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
+from .serializers import NewsSerializer, ProfileSerializer
 
 def index(request):
 
@@ -143,3 +146,58 @@ def edit_comment(request, pk):
         form = CommentForm(instance=comment)
 
     return render(request, 'news/comment_edit.html', {'form': form})
+
+
+# ==========================================
+# ЗОНА API ДЛЯ REACT (ВОЗВРАЩАЮТ JSON)
+# ==========================================
+
+# 1. API: Получить список новостей (Пункт 3: Гость может искать и фильтровать)
+@api_view(['GET'])
+@permission_classes([AllowAny])  # Доступно всем, даже без регистрации
+def api_news_list(request):
+    news_list = News.objects.all().order_by('-id')
+
+    # Поиск (работает точно так же, как в твоем старом коде)
+    search_query = request.GET.get('q')
+    if search_query:
+        news_list = news_list.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query))
+
+    # Фильтрация по категории
+    filter_category = request.GET.get('category')
+    if filter_category:
+        news_list = news_list.filter(category__name=filter_category)
+
+    # Используем наш сериализатор, чтобы перевести питоновские объекты в JSON
+    serializer = NewsSerializer(news_list, many=True)
+    return Response(serializer.data)
+
+
+# 2. API: Получить профиль пользователя (Пункт 4: Личный кабинет)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])  # Только для залогиненных
+def api_profile(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    serializer = ProfileSerializer(profile)
+    return Response(serializer.data)
+
+
+# 3. API: Начислить опыт за чтение статьи (Пункт 5: Геймификация)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def api_add_points(request):
+    profile = request.user.profile
+    profile.points += 10  # Даем 10 очков за каждую прочитанную статью
+
+    # Простая логика уровней: каждые 50 очков дают новый уровень
+    if profile.points >= (profile.level * 50):
+        profile.level += 1
+
+    profile.save()
+
+    # Отвечаем Реакту, что всё прошло успешно, и отдаем новые значения
+    return Response({
+        'message': 'Článek přečten! Získáváš 10 XP.',
+        'points': profile.points,
+        'level': profile.level
+    })

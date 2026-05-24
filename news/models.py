@@ -2,43 +2,25 @@ from django.db import models
 from django.contrib.auth.models import User
 
 
-class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name='Avatar')
-    bio = models.TextField(max_length=500, blank=True, verbose_name="Bio / About Me")
-    hobby = models.TextField(max_length=100, blank=True, verbose_name="Hobby")
-    birth_date = models.DateField(null=True, blank=True, verbose_name="Birth Date") # null/blank=True znamená, že pole může být prázdné
-
-    # Jak se objekt zobrazí v textové podobě (např. v administraci)
-    def __str__(self):
-        return f'Profile of {self.user.username}'
-
-
 class Category(models.Model):
     name = models.CharField(max_length=100)
 
-
     class Meta:
-        # Nastavuje správný tvar množného čísla pro celou aplikaci (jinak by Django napsal "Categorys")
         verbose_name_plural = 'Categories'
 
     def __str__(self):
-        # Místo <Category object (1)> se v terminálu a administraci vypíše konkrétní název (např. "Sport")
         return self.name
 
 
 class News(models.Model):
-    # ForeignKey: Vztah Mnoho k Jednomu (více zpráv může mít jednu kategorii).
-    # SET_NULL: Pokud se smaže kategorie "IT", zprávy zůstanou, jen se jim kategorie vymaže.
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     source = models.CharField(max_length=100)
     title = models.CharField(max_length=200)
-    # unique=True zabraňuje uložení duplicitních zpráv (nelze mít dvě zprávy se stejným odkazem)
     link = models.URLField(unique=True)
-    # Datum a čas. Prázdné závorky znamenají, že pole je povinné.
     pub_date = models.DateTimeField()
     image_url = models.URLField(null=True, blank=True)
     description = models.TextField(blank=True)
+    word_count = models.PositiveIntegerField(default=0)  # Potřebné pro výpočet času na čtení (Bod 5)
 
     class Meta:
         verbose_name_plural = 'News'
@@ -47,9 +29,47 @@ class News(models.Model):
         return f"{self.source}: {self.title}"
 
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name='Avatar')
+    bio = models.TextField(max_length=500, blank=True, verbose_name="Bio / About Me")
+    birth_date = models.DateField(null=True, blank=True, verbose_name="Birth Date")
+
+    # Bod 4: Osobní dashboard a Můj výběr
+    preferred_categories = models.ManyToManyField(Category, blank=True, related_name='preferred_by')
+    read_later = models.ManyToManyField(News, blank=True, related_name='saved_by')
+
+    # Bod 5: Gamifikace a statistiky
+    points = models.PositiveIntegerField(default=0)
+    level = models.PositiveIntegerField(default=1)
+
+    # Bod 9: Moderování a omezení uživatele
+    is_shadowbanned = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f'Profile of {self.user.username}'
+
+
+# Bod 6: Komunitní fórum a diskusní vlákna
+class Thread(models.Model):
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='threads')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Systém hodnocení příspěvků (upvote/downvote)
+    upvotes = models.ManyToManyField(User, blank=True, related_name='upvoted_threads')
+    downvotes = models.ManyToManyField(User, blank=True, related_name='downvoted_threads')
+
+    def __str__(self):
+        return self.title
+
+
 class Comment(models.Model):
-    # related_name='comments' nám umožňuje volat všechny komentáře zprávy jednoduše pomocí item.comments.all() v HTML šablonách
-    post = models.ForeignKey(News, on_delete=models.CASCADE, related_name='comments')
+    post = models.ForeignKey(News, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
+    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name='comments', null=True,
+                               blank=True)  # Komentáře k fóru
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     body = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
@@ -58,4 +78,15 @@ class Comment(models.Model):
         ordering = ['-created_on']
 
     def __str__(self):
-        return f"{self.body} by {self.author}"
+        return f"{self.body[:20]} by {self.author}"
+
+
+# Bod 8: Správa RSS zdrojů pro administrátora
+class RSSSource(models.Model):
+    url = models.URLField(unique=True)
+    name = models.CharField(max_length=100)
+    weight = models.PositiveIntegerField(default=1)  # Důvěryhodnost zdroje
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name

@@ -83,6 +83,6 @@ def run_scraper_logic():
                 )
                 total_added += 1
         except Exception as e:
-            print(f"Ошибка при сканировании {source_name}: {e}")
+            print(f"Error {source_name}: {e}")
 
     return total_added
