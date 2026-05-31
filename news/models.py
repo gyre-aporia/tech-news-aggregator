@@ -45,6 +45,7 @@ class Profile(models.Model):
 
     # Bod 9: Moderování a omezení uživatele
     is_shadowbanned = models.BooleanField(default=False)
+    read_history = models.ManyToManyField(News, blank=True, related_name='read_history_profiles')
 
     def __str__(self):
         return f'Profile of {self.user.username}'
@@ -90,3 +91,20 @@ class RSSSource(models.Model):
 
     def __str__(self):
         return self.name
+    
+class ForumThread(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Název vlákna")
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+class ForumPost(models.Model):
+    thread = models.ForeignKey(ForumThread, related_name='posts', on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    body = models.TextField(verbose_name="Text příspěvku")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Příspěvek od {self.author.username}"

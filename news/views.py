@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import News, Category, Profile, Comment
+from .models import News, Category, Profile, Comment, ForumThread, ForumPost
 from django.contrib.auth import login  # Funkce pro přihlášení uživatele
 from .forms import MyCustomSignupForm, ProfileForm, UserUpdateForm, CommentForm
 from django.contrib.auth.decorators import login_required  # pustí jen přihlášené uživatele
@@ -7,6 +7,7 @@ from django.core.paginator import Paginator  # Nástroj pro rozdělení dlouhéh
 from django.db.models import Q  # Umožňuje složitější dotazy do databáze (např. logické NEBO)
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
 from .serializers import NewsSerializer, ProfileSerializer
 from django.views.decorators.csrf import csrf_exempt
@@ -14,6 +15,16 @@ from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
 from django.http import JsonResponse
 import json
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from django.contrib.auth import logout as django_logout
+
+# Добавь эту функцию к остальным (api_login, api_signup)
+@csrf_exempt
+def api_logout(request):
+    if request.method == 'POST':
+        django_logout(request) # Джанго сам уничтожит сессию
+        return JsonResponse({'message': 'Úspěšně odhlášeno'})
+    return JsonResponse({'error': 'Pouze POST'}, status=405)
 
 def index(request):
 
@@ -156,57 +167,139 @@ def edit_comment(request, pk):
 # ==========================================
 # ЗОНА API ДЛЯ REACT (ВОЗВРАЩАЮТ JSON)
 # ==========================================
+def parse_advanced_search(query_string):
+    """
+    Разбирает строку поиска с операторами AND и NOT.
+    Пример: "Apple AND iPhone NOT Macbook"
+    """
+    # 1. Сначала отделяем исключения (то, что идет после NOT)
+    # Строка разобьется на части. Первая часть — то что ищем, остальные — то, что исключаем.
+    parts = query_string.split(' NOT ')
+    positive_side = parts[0]
+    negative_keywords = parts[1:] if len(parts) > 1 else []
+
+    # 2. Разбираем то, что нужно найти, по оператору AND
+    positive_keywords = positive_side.split(' AND ')
+
+    # Создаем пустой базовый объект запроса Django Q
+    q_object = Q()
+
+    # 3. Добавляем условия И (AND): КАЖДОЕ слово должно быть в титле или описании
+    for word in positive_keywords:
+        word = word.strip()
+        if word:
+            # Логика &= означает, что это условие обязательно должно выполняться (AND)
+            q_object &= (Q(title__icontains=word) | Q(description__icontains=word))
+
+    # 4. Добавляем условия НЕ (NOT): НИ ОДНОГО из этих слов не должно быть в статье
+    for word in negative_keywords:
+        word = word.strip()
+        if word:
+            # Оператор ~ означает логическое "НЕ" (NOT)
+            q_object &= ~(Q(title__icontains=word) | Q(description__icontains=word))
+
+    return q_object
+
 
 # 1. API: Получить список новостей (Пункт 3: Гость может искать и фильтровать)
 @api_view(['GET'])
-@permission_classes([AllowAny])  # Доступно всем, даже без регистрации
+@permission_classes([AllowAny])
 def api_news_list(request):
     news_list = News.objects.all().order_by('-id')
-
-    # Поиск (работает точно так же, как в твоем старом коде)
+    
     search_query = request.GET.get('q')
     if search_query:
-        news_list = news_list.filter(Q(title__icontains=search_query) | Q(description__icontains=search_query))
-
-    # Фильтрация по категории
+        # ПРИМЕНЯЕМ НАШУ ПРОДВИНУТУЮ ЛОГИКУ ПОИСКА (Пункт 10)
+        advanced_filters = parse_advanced_search(search_query)
+        news_list = news_list.filter(advanced_filters)
+        
     filter_category = request.GET.get('category')
     if filter_category:
         news_list = news_list.filter(category__name=filter_category)
 
-    # Используем наш сериализатор, чтобы перевести питоновские объекты в JSON
     serializer = NewsSerializer(news_list, many=True)
     return Response(serializer.data)
 
-
+class UnsafeSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return
+    
 # 2. API: Получить профиль пользователя (Пункт 4: Личный кабинет)
 @csrf_exempt
+@api_view(['GET', 'POST']) # Убедись, что тут декоратор от DRF
+@authentication_classes([UnsafeSessionAuthentication]) # Используем наш кастомный класс без CSRF
+@permission_classes([AllowAny])
 def api_profile(request):
-    # Если пользователь не залогинен, отдаем ошибку
     if not request.user.is_authenticated:
         return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        
+    profile = Profile.objects.filter(user=request.user).first() 
+    if not profile:
+        profile = Profile.objects.create(user=request.user)
 
-    # Находим или создаем профиль геймификации
-    profile, created = Profile.objects.get_or_create(user=request.user)
+    # ЕСЛИ ПОЛЬЗОВАТЕЛЬ ИЗМЕНЯЕТ ДАННЫЕ (POST)
+    if request.method == 'POST':
+        try:
+            # При работе с файлами данные приходят из request.POST, а не из json
+            username = request.POST.get('username')
+            email = request.POST.get('email')
+            bio = request.POST.get('bio', '')
+            birth_date = request.POST.get('birthDate', '')
+            
+            # Обновляем данные пользователя (User)
+            if username:
+                request.user.username = username
+            if email is not None:
+                request.user.email = email
+            request.user.save()
+            
+            # Обновляем данные профиля (Profile)
+            profile.bio = bio
+            if birth_date:
+                profile.birth_date = birth_date
+            else:
+                profile.birth_date = None
+                
+            # Проверяем, пришел ли файл аватарки
+            if 'avatar' in request.FILES:
+                profile.avatar = request.FILES['avatar']
+                
+            # Проверяем, нажал ли пользователь чекбокс "Zrušit" (очистить аватар)
+            elif request.POST.get('clear_avatar') == 'true':
+                if profile.avatar:
+                    profile.avatar.delete(save=False) # удаляем физический файл
+                profile.avatar = None
 
-    # Считаем, сколько очков нужно для следующего уровня (например, текущий уровень * 50)
+            profile.save()
+            return JsonResponse({'message': 'Profil byl úspěšně upraven!'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+            
+    # ОБЫЧНЫЙ GET ЗАПРОС (ПРОСМОТР ПРОФИЛЯ)
     next_level_xp = profile.level * 50
-    # Сколько очков внутри текущего уровня уже набрано
     current_level_progress = profile.points % 50 if profile.level > 1 else profile.points
+    
+    # Безопасно формируем ссылку на аватарку
+    avatar_url = None
+    if profile.avatar:
+        avatar_url = request.build_absolute_uri(profile.avatar.url)
 
     return JsonResponse({
         'user': {
             'id': request.user.id,
             'username': request.user.username,
-            'email': request.user.email or 'Email nezadán',
+            'email': request.user.email or '',
             'date_joined': request.user.date_joined.strftime('%d.%m.%Y') if request.user.date_joined else 'Neznámo',
         },
+        'avatar_url': avatar_url,
         'points': profile.points,
         'level': profile.level,
         'next_level_xp': next_level_xp,
         'current_level_progress': current_level_progress,
         'saved_count': profile.read_later.count(),
-        # Если в твоей модели Profile есть поле биография (bio) или аватар, можно раскомментировать строки ниже:
-        # 'bio': getattr(profile, 'bio', 'Žádné informace'),
+        'bio': profile.bio or '',
+        'read_history': list(profile.read_history.values_list('id', flat=True)),
+        'birth_date': profile.birth_date.strftime('%Y-%m-%d') if getattr(profile, 'birth_date', None) else ''
     })
 
 
@@ -214,30 +307,35 @@ def api_profile(request):
 # Теперь это чистая функция Django, а не DRF. Она 100% игнорирует CSRF.
 @csrf_exempt
 def api_add_points(request):
-    # Проверяем метод и авторизацию вручную
     if request.method == 'POST':
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
 
-        profile = request.user.profile
-        profile.points += 10  # Даем 10 очков
+        try:
+            data = json.loads(request.body)
+            news_id = data.get('news_id')
+            news_item = News.objects.get(id=news_id)
+            profile = request.user.profile
 
-        # Логика уровней
-        if profile.points >= (profile.level * 50):
-            profile.level += 1
+            # Проверяем, читал ли он её уже
+            if news_item in profile.read_history.all():
+                return JsonResponse({'message': 'Уже прочитано', 'points': profile.points, 'level': profile.level})
 
-        profile.save()
+            # Если не читал: добавляем в историю и даем очки
+            profile.read_history.add(news_item)
+            profile.points += 10 
+            
+            if profile.points >= (profile.level * 50):
+                profile.level += 1
+            profile.save()
 
-        # Отдаем ответ через встроенный JsonResponse
-        return JsonResponse({
-            'message': 'Článek přečten! Získáváš 10 XP.',
-            'points': profile.points,
-            'level': profile.level
-        })
+            return JsonResponse({'message': 'Článek přečten! Získáváš 10 XP.', 'points': profile.points, 'level': profile.level})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
 
 from django.contrib.auth import authenticate, login as django_login
 
-@csrf_exempt  # Отключаем проверку CSRF-токена для этого запроса
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def api_login(request):
@@ -247,7 +345,8 @@ def api_login(request):
     user = authenticate(username=username, password=password)
     
     if user is not None:
-        django_login(request, user)  # Создаем сессию внутри Django
+        # ИСПРАВЛЕНО: Тоже явно указываем бэкенд для создания сессии
+        django_login(request, user, backend='news.backends.EmailBackend')
         return Response({'message': 'Успешный вход!'})
     else:
         return Response({'error': 'Неверные данные'}, status=400)
@@ -263,18 +362,15 @@ def api_signup(request):
     if not username or not password:
         return Response({'error': 'Vyplňte jméno i heslo'}, status=400)
 
-    # Проверяем, не занято ли имя
     if User.objects.filter(username=username).exists():
         return Response({'error': 'Uživatel s tímto jménem už existuje'}, status=400)
 
-    # Создаем нового пользователя
     user = User.objects.create_user(username=username, password=password)
 
-    # Сразу же авторизуем его после регистрации
-    django_login(request, user)
+    # ИСПРАВЛЕНО: Добавляем явное указание твоего кастомного бэкенда авторизации
+    django_login(request, user, backend='news.backends.EmailBackend')
 
     return Response({'message': 'Registrace úspěšná!'})
-
 
 @csrf_exempt
 def api_toggle_save(request):
@@ -319,14 +415,16 @@ def api_news_detail(request, pk):
         # Собираем комментарии к этой статье
         comments_list = []
         for c in news.comments.all():
+            # Достаем ссылку на аватарку автора комментария
+            avatar_url = None
+            if hasattr(c.author, 'profile') and c.author.profile.avatar:
+                avatar_url = request.build_absolute_uri(c.author.profile.avatar.url)
+
             comments_list.append({
                 'id': c.id,
                 'author': c.author.username,
-                # Безопасное получение уровня (на случай если профиля вдруг нет)
                 'author_level': c.author.profile.level if hasattr(c.author, 'profile') else 1,
-
-                # БЕЗОПАСНОЕ ПОЛУЧЕНИЕ ТЕКСТА:
-                # Python сам проверит, как называется твое поле: 'body' или 'text'
+                'author_avatar': avatar_url,  # <--- НОВОЕ ПОЛЕ
                 'text': getattr(c, 'body', getattr(c, 'text', '')),
             })
 
@@ -370,3 +468,139 @@ def api_add_comment(request, pk):
             return JsonResponse({'message': 'Komentář přidán!'})
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+        
+# ==========================================
+# API ДЛЯ ФОРУМА (Пункт 6)
+# ==========================================
+
+# ИСПРАВЛЕННЫЙ ВАРИАНТ: Поиск по темам и сообщениям форума
+@csrf_exempt
+def api_forum_threads(request):
+    search_query = request.GET.get('q')  # Получаем поисковый запрос из React
+    threads = ForumThread.objects.all().order_by('-created_at')
+    
+    if search_query:
+        # Умный фильтр: ищем совпадения в названии темы ИЛИ в теле сообщений (posts__body)
+        threads = threads.filter(
+            Q(title__icontains=search_query) |
+            Q(posts__body__icontains=search_query)
+        ).distinct()  # distinct() нужен, чтобы темы не дублировались, если совпало несколько постов
+
+    data = []
+    for t in threads:
+        data.append({
+            'id': t.id,
+            'title': t.title,
+            'author': t.author.username,
+            'created_at': t.created_at.strftime('%d.%m.%Y %H:%M'),
+            'post_count': t.posts.count()
+        })
+    return JsonResponse(data, safe=False)
+@csrf_exempt
+def api_create_thread(request):
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        try:
+            data = json.loads(request.body)
+            title = data.get('title')
+            if not title:
+                return JsonResponse({'error': 'Název nesmí být prázdný'}, status=400)
+                
+            thread = ForumThread.objects.create(title=title, author=request.user)
+            return JsonResponse({'id': thread.id, 'message': 'Vlákno vytvořeno!'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+# 3. Получить детали одной темы и все сообщения в ней
+@csrf_exempt
+def api_forum_thread_detail(request, pk):
+    try:
+        thread = ForumThread.objects.get(pk=pk)
+        posts = []
+        for p in thread.posts.all().order_by('created_at'):
+            # Достаем ссылку на аватарку автора поста
+            avatar_url = None
+            if hasattr(p.author, 'profile') and p.author.profile.avatar:
+                avatar_url = request.build_absolute_uri(p.author.profile.avatar.url)
+
+            posts.append({
+                'id': p.id,
+                'author': p.author.username,
+                'author_level': p.author.profile.level if hasattr(p.author, 'profile') else 1,
+                'author_avatar': avatar_url,  # <--- НОВОЕ ПОЛЕ
+                'body': p.body,
+                'created_at': p.created_at.strftime('%d.%m.%Y %H:%M')
+            })
+            
+        return JsonResponse({
+            'id': thread.id,
+            'title': thread.title,
+            'author': thread.author.username,
+            'created_at': thread.created_at.strftime('%d.%m.%Y %H:%M'),
+            'posts': posts
+        })
+    except ForumThread.DoesNotExist:
+        return JsonResponse({'error': 'Vlákno nenalezeno'}, status=404)
+
+# 4. Добавить сообщение (ответ) в тему
+@csrf_exempt
+def api_add_forum_post(request, pk):
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        try:
+            data = json.loads(request.body)
+            body = data.get('body')
+            thread = ForumThread.objects.get(pk=pk)
+            
+            ForumPost.objects.create(thread=thread, author=request.user, body=body)
+            return JsonResponse({'message': 'Příspěvek přidán!'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+        
+
+# ==========================================
+# API ДЛЯ УДАЛЕНИЯ КОНТЕНТА
+# ==========================================
+@csrf_exempt
+def api_delete_comment(request, pk):
+    if request.method == 'DELETE':
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        try:
+            comment = Comment.objects.get(pk=pk)
+            if comment.author == request.user:
+                comment.delete()
+                return JsonResponse({'message': 'Komentář byl smazán'})
+            return JsonResponse({'error': 'Nemáte oprávnění ke smazání'}, status=403)
+        except Comment.DoesNotExist:
+            return JsonResponse({'error': 'Nenalezeno'}, status=404)
+
+@csrf_exempt
+def api_delete_forum_thread(request, pk):
+    if request.method == 'DELETE':
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        try:
+            thread = ForumThread.objects.get(pk=pk)
+            if thread.author == request.user:
+                thread.delete()
+                return JsonResponse({'message': 'Vlákno bylo smazáno'})
+            return JsonResponse({'error': 'Nemáte oprávnění ke smazání'}, status=403)
+        except ForumThread.DoesNotExist:
+            return JsonResponse({'error': 'Nenalezeno'}, status=404)
+
+@csrf_exempt
+def api_delete_forum_post(request, pk):
+    if request.method == 'DELETE':
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'Musíte se přihlásit'}, status=403)
+        try:
+            post = ForumPost.objects.get(pk=pk)
+            if post.author == request.user:
+                post.delete()
+                return JsonResponse({'message': 'Příspěvek byl smazán'})
+            return JsonResponse({'error': 'Nemáte oprávnění ke smazání'}, status=403)
+        except ForumPost.DoesNotExist:
+            return JsonResponse({'error': 'Nenalezeno'}, status=404)

@@ -1,184 +1,358 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
-
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    color: #333;
 }
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
-
-#center {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
-}
-
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
+/* Header Styles */
+header {
+    background-color: #ffffff;
+    padding: 15px 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     display: flex;
-    padding: 6px 12px;
+    justify-content: space-between;
     align-items: center;
-    gap: 8px;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
     text-decoration: none;
-    transition: box-shadow 0.3s;
+}
 
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
+.nav-links {
+    display: flex;
+    align-items: center; /* Центруем элементы по вертикали */
+}
 
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
+.nav-links a {
+    margin-left: 20px;
+    text-decoration: none;
+    color: #555;
+    font-weight: 500;
+    display: flex;
+    align-items: center; /* Чтобы иконка и текст были ровно */
+}
+
+.nav-links a:hover { color: #007bff; }
+
+/* Стиль для мини-аватарки в шапке */
+.nav-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 8px;
+    border: 2px solid #ddd;
+}
+
+/* ИЗМЕНЕНО: Снято ограничение ширины, сайт теперь на весь экран */
+.content-container {
+    width: 100%;             /* Занимает всю ширину экрана */
+    max-width: none;         /* Убираем максимальное ограничение */
+    margin: 0;               /* Убираем центрирование, оно больше не нужно */
+    padding: 20px 40px;      /* Оставляем отступы сверху/снизу и добавляем по бокам, чтобы не прилипало к краям */
+    box-sizing: border-box;  /* Чтобы padding не увеличивал ширину сверх 100% */
+}
+
+/* Кнопка Logout */
+.btn-logout {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: 15px;
+    font-weight: 500;
+}
+
+.btn-logout:hover { text-decoration: underline; }
+
+/* --- СТИЛИ ДЛЯ ФОРМ (Login, Signup, Edit Profile) --- */
+.container {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+    margin: 50px auto; /* Центруем блок форм */
+}
+
+h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
+    font-weight: bold;
+}
+
+.form-group { margin-bottom: 20px; }
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Красивые поля ввода (для всех страниц сразу) */
+input[type="text"], input[type="password"], input[type="email"], input[type="date"], textarea, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+input:focus, textarea:focus {
+    border-color: #007bff;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+/* Синяя кнопка (общая для всего сайта) */
+.btn-submit, button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 10px;
+}
+
+.btn-submit:hover, button[type="submit"]:hover { background: #0056b3; }
+
+.links { text-align: center; margin-top: 20px; font-size: 14px; }
+.links a { color: #007bff; text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+
+/* Ошибки форм */
+.errorlist {
+    color: #721c24;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 5px;
+    list-style: none; /* Убираем точки */
+    margin-bottom: 15px;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* --- СТИЛИ ДЛЯ НОВОСТЕЙ (Index) --- */
+/* Меню категорий */
+.category-menu {
+    display: flex;
     justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
+    gap: 10px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
 }
 
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
+.cat-btn {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #333;
+    transition: 0.3s;
 }
 
-.ticks {
-  position: relative;
-  width: 100%;
+.cat-btn:hover, .cat-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
-  }
+/* Сетка новостей */
+.news-grid {
+    display: grid;
+    /* Теперь, когда ширина свободная, карточек в ряд будет помещаться больше */
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
-  }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
-  }
+/* Карточка новости */
+/* --- КАРТОЧКИ (FIXED ALIGNMENT) --- */
+.card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    
+    /* ВАЖНО: Растягиваем карточку на всю высоту ячейки сетки */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.2s;
+}
+
+.card:hover { transform: translateY(-5px); }
+
+.card-body {
+    padding: 15px;
+    
+    /* ВАЖНО: Тело карточки тоже становится флекс-колонкой */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* Занимает всё место */
+}
+
+/* Это заставляет текст расти и толкать кнопки вниз */
+.card-body p {
+    flex-grow: 1;
+    margin-bottom: 20px; /* Отступ до кнопок */
+}
+
+/* Блок с кнопками Source/Discuss */
+.card-buttons {
+    margin-top: auto; /* Приклеивает блок к самому низу */
+    display: flex;
+    gap: 10px;
+}
+
+.source-tag {
+    background: #333; color: white; padding: 3px 8px;
+    border-radius: 4px; font-size: 12px;
+}
+
+/* Пагинация (Страницы 1, 2, 3...) */
+.pagination {
+    margin-top: 40px;
+    text-align: center;
+    padding-bottom: 20px;
+}
+
+.pagination a {
+    padding: 8px 16px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+    margin: 0 5px;
+}
+
+.pagination .current {
+    font-weight: bold;
+    color: #555;
+}
+
+/* =========================================
+   ФИНАЛЬНЫЙ ПОИСК (OVERFLOW METHOD)
+   ========================================= */
+.search-wrapper {
+    margin: 0 20px;
+    display: flex;
+    align-items: center;
+}
+
+.search-bar-final {
+    display: flex;
+    align-items: center;
+    width: 300px;        /* Ширина поиска */
+    height: 40px;        /* Строгая высота */
+    background: white;
+    border: 2px solid #007bff; /* Синяя рамка вокруг всего */
+    border-radius: 25px;  /* Сильные закругления */
+    overflow: hidden;     /* ГЛАВНЫЙ СЕКРЕТ: Обрезаем всё лишнее */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Сбрасываем стили для поля ВНУТРИ поиска */
+.search-bar-final input {
+    flex-grow: 1;        /* Занимает всё место слева */
+    height: 100% !important;
+    border: none !important;      /* Убираем рамки */
+    outline: none !important;
+    padding: 0 0 0 15px !important; /* Отступ текста слева */
+    font-size: 15px;
+    background: transparent !important;
+    color: #333;
+    margin: 0;           /* Убираем внешние отступы */
+}
+
+/* Сбрасываем стили для кнопки ВНУТРИ поиска */
+.search-bar-final button {
+    width: 50px;         /* Ширина кнопки */
+    height: 100% !important; /* Растягиваем на всю высоту */
+    background: #007bff; /* Синий фон */
+    color: white;
+    border: none !important;
+    cursor: pointer;
+    font-size: 18px;
+    
+    /* Центруем лупу */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+    margin: 0;
+    
+    /* Убираем скругления у самой кнопки, их делает контейнер */
+    border-radius: 0 !important;
+    transition: background 0.2s;
+}
+
+.search-bar-final button:hover {
+    background: #0056b3;
+}
+
+/* --- СТИЛИ ДЛЯ КРЕСТИКА (FIX) --- */
+.search-bar-final .clear-btn {
+    /* Делаем его блоком, чтобы можно было ровнять */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    /* Размеры */
+    height: 100% !important; /* Растягиваем на всю высоту поиска */
+    width: 30px !important;  /* Фиксированная ширина */
+    
+    /* Текст */
+    text-decoration: none;
+    color: #ccc; /* Светло-серый, чтобы не мозолил глаза */
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.search-bar-final .clear-btn:hover {
+    color: #dc3545; /* Краснеет при наведении */
+    background-color: #f9f9f9; /* Легкий фон при наведении */
+}
+
+/* --- FIX ДЛЯ ДУБЛЕЙ КАРТИНОК --- */
+/* Скрываем картинки ВНУТРИ текста новости */
+.article-content img {
+    display: none !important;
+}
+
+/* На всякий случай делаем текст читабельным */
+.article-content {
+    line-height: 1.6;
+    font-size: 16px;
+    color: #333;
+}
+
+/* Если в тексте есть ссылки, делаем их красивыми */
+.article-content a {
+    color: #007bff;
+    text-decoration: none;
+}
+.article-content a:hover {
+    text-decoration: underline;
 }

@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from news import views
 from news.views import (
     index,
     signup,
@@ -18,6 +19,10 @@ from news.views import (
     api_toggle_save,
     api_news_detail,
     api_add_comment,
+    api_forum_threads,
+    api_create_thread,
+    api_forum_thread_detail,
+    api_add_forum_post,
     api_add_points
 )
 
@@ -36,6 +41,14 @@ urlpatterns = [
     path('api/toggle-save/', api_toggle_save, name='api_toggle_save'),
     path('api/news/<int:pk>/', api_news_detail, name='api_news_detail'),
     path('api/news/<int:pk>/comment/', api_add_comment, name='api_add_comment'),
+    path('api/forum/', api_forum_threads, name='api_forum_threads'),
+    path('api/forum/create/', api_create_thread, name='api_create_thread'),
+    path('api/forum/<int:pk>/', api_forum_thread_detail, name='api_forum_thread_detail'),
+    path('api/forum/<int:pk>/post/', api_add_forum_post, name='api_add_forum_post'),
+    path('api/logout/', views.api_logout, name='api_logout'),
+    path('api/comment/<int:pk>/delete/', views.api_delete_comment, name='api_delete_comment'),
+    path('api/forum/thread/<int:pk>/delete/', views.api_delete_forum_thread, name='api_delete_forum_thread'),
+    path('api/forum/post/<int:pk>/delete/', views.api_delete_forum_post, name='api_delete_forum_post'),
 
     # === НАШИ НОВЫЕ API МАРШРУТЫ ДЛЯ REACT ===
     # По этим адресам React будет забирать и отправлять JSON данные
