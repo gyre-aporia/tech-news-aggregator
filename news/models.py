@@ -1,7 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
+# ==========================================
+# KATEGORIE
+# ==========================================
 class Category(models.Model):
     name = models.CharField(max_length=100)
 
@@ -11,24 +13,48 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
-
+# ==========================================
+# ZPRÁVY (NEWS)
+# ==========================================
 class News(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     source = models.CharField(max_length=100)
-    title = models.CharField(max_length=200)
-    link = models.URLField(unique=True)
-    pub_date = models.DateTimeField()
+    
+    # db_index=True extrémně zrychlí vyhledávání (Bod 10)
+    title = models.CharField(max_length=200, db_index=True) 
+    link = models.URLField(unique=True) 
+    pub_date = models.DateTimeField(db_index=True) # Index pro rychlé řazení podle data
+    
     image_url = models.URLField(null=True, blank=True)
     description = models.TextField(blank=True)
-    word_count = models.PositiveIntegerField(default=0)  # Potřebné pro výpočet času na čtení (Bod 5)
+    word_count = models.PositiveIntegerField(default=0)  # Výpočet času na čtení (Bod 5)
 
     class Meta:
         verbose_name_plural = 'News'
+        ordering = ['-pub_date'] # Automaticky řadí od nejnovějších
 
     def __str__(self):
         return f"{self.source}: {self.title}"
 
+# ==========================================
+# KOMENTÁŘE K NOVINÁM
+# ==========================================
+class Comment(models.Model):
+    # Očištěno: Nyní slouží POUZE pro články (News), fórum má svůj vlastní ForumPost
+    post = models.ForeignKey(News, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    body = models.TextField()
+    created_on = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_on']
+
+    def __str__(self):
+        return f"{self.body[:20]} by {self.author}"
+
+# ==========================================
+# UŽIVATELSKÝ PROFIL
+# ==========================================
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True, verbose_name='Avatar')
@@ -50,53 +76,19 @@ class Profile(models.Model):
     def __str__(self):
         return f'Profile of {self.user.username}'
 
-
-# Bod 6: Komunitní fórum a diskusní vlákna
-class Thread(models.Model):
-    title = models.CharField(max_length=200)
-    body = models.TextField()
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='threads')
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    # Systém hodnocení příspěvků (upvote/downvote)
-    upvotes = models.ManyToManyField(User, blank=True, related_name='upvoted_threads')
-    downvotes = models.ManyToManyField(User, blank=True, related_name='downvoted_threads')
-
-    def __str__(self):
-        return self.title
-
-
-class Comment(models.Model):
-    post = models.ForeignKey(News, on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
-    thread = models.ForeignKey(Thread, on_delete=models.CASCADE, related_name='comments', null=True,
-                               blank=True)  # Komentáře k fóru
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    body = models.TextField()
-    created_on = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_on']
-
-    def __str__(self):
-        return f"{self.body[:20]} by {self.author}"
-
-
-# Bod 8: Správa RSS zdrojů pro administrátora
-class RSSSource(models.Model):
-    url = models.URLField(unique=True)
-    name = models.CharField(max_length=100)
-    weight = models.PositiveIntegerField(default=1)  # Důvěryhodnost zdroje
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
-    
+# ==========================================
+# KOMUNITNÍ FÓRUM (Bod 6)
+# ==========================================
 class ForumThread(models.Model):
-    title = models.CharField(max_length=255, verbose_name="Název vlákna")
+    title = models.CharField(max_length=200, db_index=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    category = models.CharField(max_length=50, default='Ostatní', db_index=True)
+    description = models.TextField(blank=True, null=True)
+    
+    upvotes = models.ManyToManyField(User, related_name='thread_upvotes', blank=True)
+    downvotes = models.ManyToManyField(User, related_name='thread_downvotes', blank=True)
+    
     def __str__(self):
         return self.title
 
@@ -108,3 +100,27 @@ class ForumPost(models.Model):
 
     def __str__(self):
         return f"Příspěvek od {self.author.username}"
+
+# ==========================================
+# RSS ZDROJE A PARSER (Bod 8)
+# ==========================================
+class RSSSource(models.Model):
+    name = models.CharField(max_length=100, verbose_name="Název zdroje")
+    url = models.URLField(verbose_name="RSS URL")
+    category = models.CharField(max_length=50, verbose_name="Výchozí kategorie")
+    is_active = models.BooleanField(default=True, verbose_name="Aktivní")
+    
+    weight = models.IntegerField(default=5, verbose_name="Váha / Důvěryhodnost (1-10)")
+    
+    tag_mapping = models.TextField(
+        blank=True, 
+        verbose_name="Mapování tagů", 
+        help_text="Formát: tag_z_rss:interni_kategorie, oddělené čárkou (např. python:IT, uefa:Sport)"
+    )
+
+    class Meta:
+        verbose_name = "RSS Zdroj"
+        verbose_name_plural = "RSS Zdroje"
+
+    def __str__(self):
+        return f"{self.name} (Váha: {self.weight})"

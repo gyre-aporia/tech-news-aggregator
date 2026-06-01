@@ -1,37 +1,107 @@
-# Importujeme hlavní nástroj pro administraci (vytváří grafické rozhraní)
 from django.contrib import admin
-from .models import News, Category, Profile
-# Importujeme výchozí vzhled pro uživatele a samotný model User (tabulku uživatelů)
 from django.contrib.auth.admin import UserAdmin 
 from django.contrib.auth.models import User 
+from django.utils import timezone
+from datetime import timedelta
+from django.template.response import TemplateResponse
+from django.urls import path
 
+# Přidali jsme import nových modelů: ForumThread, ForumPost, Comment
+from .models import News, Category, RSSSource, Profile, ForumThread, ForumPost, Comment
 
-# Použij tento design (NewsAdmin) pro model News
+# ==========================================
+# ZPRÁVY A KATEGORIE
+# ==========================================
 @admin.register(News) 
 class NewsAdmin(admin.ModelAdmin):
     list_display = ('id', 'title', 'source', 'category', 'pub_date')
     list_filter = ('source', 'category', 'pub_date',)
     search_fields = ('title',)
-
+    # OПТИМИЗАЦИЯ: Zabrání N+1 problému. Django načte kategorii rovnou s článkem v jednom SQL dotazu.
+    list_select_related = ('category',)
 
 @admin.register(Category) 
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name',)
 
-# StackedInline: Slouží k "vložení" jednoho formuláře do druhého. 
-# "Stacked" znamená, že políčka profilu budou seřazena pod sebou.
+# ==========================================
+# RSS ZDROJE A STATISTIKY (Bod 8)
+# ==========================================
+@admin.register(RSSSource)
+class RSSSourceAdmin(admin.ModelAdmin):
+    list_display = ('name', 'category', 'weight', 'is_active', 'url')
+    list_filter = ('category', 'is_active')
+    search_fields = ('name', 'url')
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('statistiky/', self.admin_site.admin_view(self.statistics_view), name='rss-statistics'),
+        ]
+        return custom_urls + urls
+
+    def statistics_view(self, request):
+        now = timezone.now()
+        
+        # Statistiky za období
+        stats_period = {
+            'posledni_24h': News.objects.filter(pub_date__gte=now - timedelta(days=1)).count(),
+            'poslednich_7_dni': News.objects.filter(pub_date__gte=now - timedelta(days=7)).count(),
+            'poslednich_30_dni': News.objects.filter(pub_date__gte=now - timedelta(days=30)).count(),
+        }
+
+        # Vytížení databáze (přidáno počítání fóra a komentářů)
+        db_load = {
+            'celkem_clanku': News.objects.count(),
+            'celkem_kategorii': Category.objects.count(),
+            'celkem_rss_zdroju': RSSSource.objects.count(),
+            'celkem_uzivatelu': User.objects.count(),
+            'celkem_vlakna_forum': ForumThread.objects.count(),
+            'celkem_komentaru': Comment.objects.count(),
+        }
+
+        context = dict(
+            self.admin_site.each_context(request),
+            title="Statistiky systému a vytížení databáze",
+            stats_period=stats_period,
+            db_load=db_load,
+        )
+        
+        return TemplateResponse(request, "admin/news_statistics.html", context)
+
+# ==========================================
+# FÓRUM A KOMENTÁŘE (Bod 6 a 9)
+# ==========================================
+@admin.register(ForumThread)
+class ForumThreadAdmin(admin.ModelAdmin):
+    list_display = ('title', 'author', 'category', 'created_at')
+    list_filter = ('category', 'created_at')
+    search_fields = ('title', 'author__username')
+    list_select_related = ('author',) # OПТИМИЗАЦИЯ
+
+@admin.register(ForumPost)
+class ForumPostAdmin(admin.ModelAdmin):
+    list_display = ('thread', 'author', 'created_at')
+    search_fields = ('body', 'author__username', 'thread__title')
+    list_select_related = ('thread', 'author') # OПТИМИЗАЦИЯ
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ('post', 'author', 'created_on')
+    search_fields = ('body', 'author__username')
+    list_select_related = ('post', 'author') # OПТИМИЗАЦИЯ
+
+# ==========================================
+# UŽIVATELSKÉ PROFILY
+# ==========================================
 class ProfileInline(admin.StackedInline):
-    model = Profile # Určuje, že tento vložený formulář patří modelu Profile
-    can_delete = False # Zakazuje administrátorovi smazat profil bez smazání samotného uživatele
+    model = Profile 
+    can_delete = False 
     verbose_name_plural = 'Profile'
 
-# Django má model User zaregistrovaný v administraci už v základu.
-# Abychom k němu mohli přidat náš Profil, musíme ho nejdřív "odregistrovat".
 admin.site.unregister(User) 
 
-# Dědíme z UserAdmin, abychom neztratili složité funkce (např. hashování hesel).
 class CustomUserAdmin(UserAdmin):
     inlines = (ProfileInline, ) 
 
-# Zaregistrujeme model User zpět na web, ale s našimi novými pravidly (CustomUserAdmin)
 admin.site.register(User, CustomUserAdmin)

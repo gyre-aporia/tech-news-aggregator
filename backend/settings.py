@@ -1,21 +1,26 @@
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ==========================================
+# BEZPEČNOSTNÍ NASTAVENÍ (PRODUKCE vs. VÝVOJ)
+# ==========================================
+# V produkci se SECRET_KEY a DEBUG nenačítají z kódu, ale ze systémových proměnných
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY', 
+    'django-insecure-_q2474sv24x2o)qcu%_bnu&hgp=0u*9qn%95y-6fz$nm*gpv%t'
+)
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-_q2474sv24x2o)qcu%_bnu&hgp=0u*9qn%95y-6fz$nm*gpv%t'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Pokud v systému není proměnná DJANGO_DEBUG rovna 'False', jedeme ve vývojovém režimu
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') != 'False'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
-# Application definition
+# ==========================================
+# APLIKACE A MIDDLEWARE
+# ==========================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -24,17 +29,17 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Наши новые библиотеки:
+    # Knihovny třetích stran
     'rest_framework',
     'corsheaders',
 
-    # Твои приложения:
+    # Vlastní aplikace
     'news',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware', # Musí být vysoko pro správné fungování API
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -62,10 +67,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
+# ==========================================
+# DATABÁZE
+# ==========================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -73,76 +77,56 @@ DATABASES = {
     }
 }
 
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
-
+# ==========================================
+# AUTENTIZACE A HESLA
+# ==========================================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
-LANGUAGE_CODE = 'cs'
-
-TIME_ZONE = 'Europe/Prague'
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = 'static/'
-
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-LOGIN_REDIRECT_URL = '/'
-
-LOGOUT_REDIRECT_URL = '/'
-
+# Vlastní ověřovací backend (umožňuje přihlášení pomocí e-mailu)
 AUTHENTICATION_BACKENDS = [
     'news.backends.EmailBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Отключаем глобальный доступ для всех
-CORS_ALLOW_ALL_ORIGINS = False
+# ==========================================
+# LOKALIZACE (Jazyk a čas)
+# ==========================================
+LANGUAGE_CODE = 'cs'
+TIME_ZONE = 'Europe/Prague'
+USE_I18N = True
+USE_TZ = True
 
-# Явно разрешаем адрес, на котором запущен твой React (Vite)
+# ==========================================
+# STATICKÉ A MEDIÁLNÍ SOUBORY
+# ==========================================
+STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# ==========================================
+# CORS A API NASTAVENÍ (Propojení s Reactem)
+# ==========================================
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_SECURE = False
-
-# Разрешаем передачу кук/сессий через CORS
 CORS_ALLOW_CREDENTIALS = True
+
+# Nastavení cookies pro lokální vývoj (React + Django na stejném PC)
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False 
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny', # Позволяем всем стучаться на API, а проверку авторизации делаем внутри функций
+        'rest_framework.permissions.AllowAny', 
     ],
 }

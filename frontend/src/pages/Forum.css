@@ -1,0 +1,96 @@
+.thread-card { border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.02); text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
+.thread-card:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.thread-meta { font-size: 12px; color: #888; }
+.page-box { 
+  max-width: 800px; 
+  background: white; 
+  padding: 40px !important; 
+  border-radius: 12px; 
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
+  margin: 30px auto; 
+  width: 100%;
+}
+
+.comment-form-box { 
+  display: flex; 
+  gap: 15px; 
+  margin-top: 30px; 
+  margin-bottom: 30px; 
+  background: #f8f9fa; 
+  padding: 20px !important; 
+  border-radius: 10px; 
+  border: 1px solid #e9ecef; 
+}
+
+.thread-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #ffffff;
+  padding: 20px;
+  margin-bottom: 15px;
+  border-radius: 12px;
+  border: 1px solid #edf2f7;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.thread-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+  border-color: #cbd5e0;
+}
+
+.vote-box {
+  z-index: 10;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f7fafc;
+  padding: 8px;
+  border-radius: 8px;
+  min-width: 45px;
+}
+
+.vote-btn {
+  padding: 5px 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #718096;
+  font-size: 16px;
+  transition: color 0.2s;
+}
+
+.vote-btn:hover { color: #3182ce; }
+
+.thread-meta {
+  font-size: 13px;
+  color: #a0aec0;
+  margin-top: 8px;
+}
+
+button:not(:disabled):hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.comment-card {
+  padding: 15px;
+  margin-bottom: 15px;
+  background: #ffffff;
+  border-radius: 0 8px 8px 0; 
+  border-left: 6px solid #fff; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.belt-white { border-left-color: #f7fafc; }
+.belt-yellow { border-left-color: #f6e05e; }
+.belt-green { border-left-color: #48bb78; }
+.belt-blue { border-left-color: #4299e1; }
+.belt-red { border-left-color: #f56565; }
+.belt-black { border-left-color: #2d3748; }

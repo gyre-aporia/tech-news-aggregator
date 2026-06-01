@@ -1,0 +1,20 @@
+.profile-box { max-width: 900px; margin: 40px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: left; }
+.profile-panel { background: #fff; padding: 25px; border-radius: 10px; border: 1px solid #e9ecef; }
+.profile-panel h3 { color: #333; font-size: 18px; margin-top: 0; margin-bottom: 15px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+.progress-bar-bg { width: 100%; background-color: #ddd; height: 18px; border-radius: 10px; overflow: hidden; margin-top: 30px; }
+.progress-bar-fill { background-color: #28a745; height: 100%; transition: width 0.5s ease; }
+.profile-panel {
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 8px;
+  border-left: 8px solid #f7fafc; /* Толстая полоса для акцента */
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.belt-white { border-left-color: #f7fafc; }
+.belt-yellow { border-left-color: #f6e05e; }
+.belt-green { border-left-color: #48bb78; }
+.belt-blue { border-left-color: #4299e1; }
+.belt-red { border-left-color: #f56565; }
+.belt-black { border-left-color: #2d3748; }

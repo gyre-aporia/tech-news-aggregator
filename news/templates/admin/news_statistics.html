@@ -1,0 +1,48 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div id="content-main">
+    <div class="module">
+        <h2 style="background: #417690; color: white; padding: 10px; border-radius: 4px;">Počet stažených článků za období</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Za posledních 24 hodin:</td>
+                <td style="padding: 12px; font-size: 16px; color: #417690; font-weight: bold;">{{ stats_period.posledni_24h }}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Za posledních 7 dní:</td>
+                <td style="padding: 12px; font-size: 16px; color: #417690; font-weight: bold;">{{ stats_period.poslednich_7_dni }}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Za posledních 30 dní:</td>
+                <td style="padding: 12px; font-size: 16px; color: #417690; font-weight: bold;">{{ stats_period.poslednich_30_dni }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="module">
+        <h2 style="background: #264b5d; color: white; padding: 10px; border-radius: 4px;">Vytížení databáze (Počet záznamů)</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Celkový počet článků (News):</td>
+                <td style="padding: 12px;">{{ db_load.celkem_clanku }}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Celkový počet kategorií:</td>
+                <td style="padding: 12px;">{{ db_load.celkem_kategorii }}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Celkový počet RSS zdrojů:</td>
+                <td style="padding: 12px;">{{ db_load.celkem_rss_zdroju }}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ccc;">
+                <td style="padding: 12px; font-weight: bold;">Registrovaní uživatelé (User):</td>
+                <td style="padding: 12px;">{{ db_load.celkem_uzivatelu }}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <a href="../" class="button" style="background: #79aec8; padding: 10px 20px; color: white; text-decoration: none; border-radius: 4px;">Zpět do administrace</a>
+    </div>
+</div>
+{% endblock %}

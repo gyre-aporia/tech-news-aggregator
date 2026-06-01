@@ -1,0 +1,10 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="statistiky/" style="background-color: #417690; color: white; font-weight: bold;">
+            + Zobrazit statistiky
+        </a>
+    </li>
+    {{ block.super }}
+{% endblock %}

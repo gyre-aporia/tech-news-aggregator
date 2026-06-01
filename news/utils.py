@@ -1,23 +1,11 @@
 import feedparser
 from bs4 import BeautifulSoup
-from .models import News, Category
+from .models import News, Category, RSSSource
 from dateutil import parser
 from django.utils import timezone
 
-# Твой список ссылок
-rss_links = [
-    ("NASA Breaking News", "https://www.nasa.gov/rss/dyn/breaking_news.rss", "Science"),
-    ("ScienceDaily", "https://www.sciencedaily.com/rss/top/science.xml", "Science"),
-    ("Live Science", "https://www.livescience.com/feeds/all", "Science"),
-    ("FreeCodeCamp", "https://www.freecodecamp.org/news/rss/", "IT"),
-    ("MIT Tech Review", "https://www.technologyreview.com/feed/", "IT"),
-    ("Real Python", "https://realpython.com/atom.xml", "IT"),
-    ("Outside Magazine", "https://www.outsideonline.com/feed", "Sport"),
-    ("Pinkbike", "https://www.pinkbike.com/pinkbike_xml_feed.php", "Sport"),
-]
-
 def get_image(entry):
-    """Попытка найти картинку в RSS-посте"""
+    """Pokus o nalezení obrázku v RSS příspěvku"""
     if 'media_content' in entry and len(entry.media_content) > 0:
         if 'url' in entry.media_content[0]:
             return entry.media_content[0]['url']
@@ -36,7 +24,7 @@ def get_image(entry):
             if enclosure.get('type', '').startswith('image/'):
                 return enclosure.get('href', '')
 
-    # Поиск в HTML контенте
+    # Hledání v HTML obsahu
     content_html = entry.get('summary', '') or entry.get('description', '')
     if 'content' in entry:
         for c in entry.content:
@@ -51,38 +39,78 @@ def get_image(entry):
     return None
 
 def run_scraper_logic():
-    """Главная функция, которая бежит по RSS и сохраняет новости"""
+    """Hlavní funkce, která prochází aktivní RSS zdroje z databáze a ukládá zprávy"""
     total_added = 0
-    print("Запуск парсера...")
+    print("Spouštím parser RSS zdrojů...")
 
-    for source_name, url, category_name in rss_links:
+    active_sources = RSSSource.objects.filter(is_active=True)
+
+    if not active_sources.exists():
+        print("Nebyly nalezeny žádné aktivní RSS zdroje v databázi.")
+        return 0
+
+    # OПТИМИЗАЦИЯ 1: Načtení všech existujících odkazů do paměti (Set) pro extrémní zrychlení
+    existing_links = set(News.objects.values_list('link', flat=True))
+
+    for source in active_sources:
         try:
-            print(f"Scanning: {source_name}...")
-            feed = feedparser.parse(url)
-            category_obj, created = Category.objects.get_or_create(name=category_name)
+            print(f"Skenuji zdroj: {source.name} ({source.category})...")
+            feed = feedparser.parse(source.url)
+
+            # OПТИМИЗАЦИЯ 2: Vytvoření slovníku tagů pouze jednou pro každý zdroj, ne pro každý článek
+            mapping_dict = {}
+            if source.tag_mapping:
+                for item in source.tag_mapping.split(','):
+                    if ':' in item:
+                        rss_tag, internal_cat = item.split(':', 1)
+                        mapping_dict[rss_tag.strip().lower()] = internal_cat.strip()
 
             for entry in feed.entries:
-                if News.objects.filter(link=entry.link).exists():
+                # OПТИМИЗАЦИЯ 1: Okamžitá kontrola v paměti (žádný dotaz do DB)
+                if entry.link in existing_links:
                     continue
 
                 try:
-                    # Пытаемся превратить строку в дату
                     published_date = parser.parse(entry.get('published'))
-                except:
-                    # Если даты нет или ошибка — ставим "сейчас"
+                except Exception:
                     published_date = timezone.now()
+
+                final_category_name = source.category
+
+                # Logika mapování tagů (Bod 8 zadání)
+                if mapping_dict and 'tags' in entry:
+                    for tag_obj in entry.tags:
+                        tag_term = tag_obj.get('term', '').lower()
+                        if tag_term in mapping_dict:
+                            final_category_name = mapping_dict[tag_term]
+                            break # Nalezena shoda
+
+                # Zajištění, že kategorie existuje
+                category_obj, _ = Category.objects.get_or_create(name=final_category_name)
+                
+                # Získání čistého textu bez HTML značek pro výpočet slov
+                raw_description = entry.get('description', 'Bez popisu')
+                clean_text = BeautifulSoup(raw_description, "html.parser").get_text()
+                
+                # OПТИМИЗАЦИЯ 3: Výpočet počtu slov pro gamifikaci (Bod 5)
+                calculated_word_count = len(clean_text.split())
 
                 News.objects.create(
                     category=category_obj,
-                    source=source_name,
+                    source=source.name,
                     title=entry.title,
                     link=entry.link,
                     pub_date=published_date,
-                    description=entry.get('description', 'No Description'),
+                    description=raw_description,
                     image_url=get_image(entry),
+                    word_count=calculated_word_count # Uložení počtu slov do DB
                 )
+                
+                # Přidáme nový odkaz do paměti, aby se neduplikoval v rámci jednoho běhu
+                existing_links.add(entry.link)
                 total_added += 1
+                
         except Exception as e:
-            print(f"Error {source_name}: {e}")
+            print(f"Chyba při zpracování zdroje {source.name}: {e}")
 
     return total_added
